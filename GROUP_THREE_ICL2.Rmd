@@ -1,0 +1,230 @@
+---
+title: "GROUP_THREE_ICL"
+author: "Group Three"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```         
+```
+
+## PLAN
+
+-   Import the dataset (clinic_vital - excel file)
+
+-   Cleaned summary to spot data entry problems
+
+    -   data entry problems to understand patient population before health outreach campaign
+
+        -   cleaning columns : replacing missing by means
+
+        -   calculations : BMI
+
+    -   Data Visualizations
+
+    -   Interepretation
+
+## Importing the dataset
+
+```{r}
+# import excel
+clinic_vitals <- read_excel("~/Documents/data_group_work/data/03_clinic_vitals.xlsx")
+
+# display first 10 rows
+head(clinic_vitals)
+```
+
+### Inspecting the data
+
+```{r}
+# show data information : length, class, mode
+summary(clinic_vitals)
+```
+
+```{r}
+# display data structure : columns , datatype , length
+str(clinic_vitals)
+```
+
+```{r}
+# check length and columns : length 1024 rows, columns (9)
+dim(clinic_vitals)
+```
+
+#### Check for impossible age values
+
+```{r}
+# sum of ages below 0 and more than 100 (close to 200)
+# less than zero or more than 100 
+sum(clinic_vitals$age < 0 | clinic_vitals$age > 100)
+```
+
+```{r}
+# replacing ages below zero and above 100 with NA (missing)
+clinic_vitals$age[clinic_vitals$age < 0 |clinic_vitals$age > 100 ] <- NA
+```
+
+```{r}
+# checking changes applied
+table(clinic_vitals$age)
+```
+
+```{r}
+# checking changes applied : length and columns
+dim(clinic_vitals)
+```
+
+#### check for missing values in weight_kg and height_m
+
+```{r}
+# sum of missing values 
+colSums(is.na(clinic_vitals))
+```
+
+```{r}
+# replacing missing values of weight with mean
+clinic_vitals$weight_kg[is.na(clinic_vitals$weight_kg)] <- mean(clinic_vitals$weight_kg, na.rm =  TRUE)
+```
+
+```{r}
+# replacing missing values of height with mean
+clinic_vitals$height_m[is.na(clinic_vitals$height_m)] <- mean(clinic_vitals$height_m, na.rm =  TRUE)
+```
+
+```{r}
+# sum of missing values 
+colSums(is.na(clinic_vitals))
+```
+
+### Systolic_bp and Diastolic_bp check
+
+```{r}
+# checking count of where sys_bp < dia_bp
+sum(clinic_vitals$systolic_bp < clinic_vitals$diastolic_bp, na.rm = TRUE)
+```
+
+```{r}
+# swapping occurrence where the systolic < diastolic
+# step 1: assigned and index to cases where sys_bp < dias_bp
+index <- clinic_vitals$systolic_bp < clinic_vitals$diastolic_bp
+
+# store dias_index in a store 
+temporary_store <- clinic_vitals$diastolic_bp[index]
+
+# swap 
+clinic_vitals$systolic_bp[index] <- clinic_vitals$diastolic_bp[index]
+
+# retrieve
+clinic_vitals$diastolic_bp[index] <- temporary_store
+
+```
+
+```{r}
+# checking count of where sys_bp < dia_bp
+sum(clinic_vitals$systolic_bp < clinic_vitals$diastolic_bp, na.rm = TRUE)
+```
+
+### Cleaning the smoker column (Yes/NO)
+
+```{r}
+# cleaning from yes,y to Yes 
+clinic_vitals$smoker[tolower(clinic_vitals$smoker) %in% c("yes", "y")] <- "Yes"
+clinic_vitals$smoker[tolower(clinic_vitals$smoker) %in% c("no", "n")] <- "No"
+```
+
+```{r}
+head(clinic_vitals$smoker, 100)
+```
+
+### Duplicated Rows
+
+```{r}
+# identifying the count of duplicated rows 
+sum(duplicated(clinic_vitals))
+```
+
+```{r}
+# identifying the duplicated rows themselves
+clinic_vitals[duplicated(clinic_vitals), ]
+```
+
+```{r}
+clinic_vitals <- clinic_vitals[!duplicated(clinic_vitals), ]
+```
+
+```{r}
+# identifying the count of duplicated rows 
+sum(duplicated(clinic_vitals))
+```
+
+## Calculating BMI
+
+### BMI = weight / (height \*\* 2)
+
+```{r}
+clinic_vitals$BMI <- clinic_vitals$weight_kg / clinic_vitals$height_m ** 2
+```
+
+## Visualisations
+
+### Histogram
+
+```{r}
+# frequency distribution 
+hist(clinic_vitals$BMI, main = "Body Mass Index (BMI) DISTRIBUTION", xlab = "Body Mass Index (BMI)", ylab = "Count of people", col = "blue")
+```
+
+## Histogram Interpretation
+
+-   The histogram shows the distribution of Body Mass Index (BMI) among the individuals in the dataset.
+
+-   The x-axis represents BMI values, while the y-axis represents the frequency (number of individuals) within each BMI range.
+
+-   The bars indicate how frequently different BMI values occur.
+
+-   The BMI distribution appears approximately normally distributed, with most individuals having BMI values concentrated around the center and fewer individuals at the lower and higher extremes.
+
+-   This suggests that the BMI values in the study population are fairly evenly distributed around the average.
+
+### Boxplot
+
+```{r}
+# plotting the boxplot of systolic bp against clinical_vitals
+boxplot(clinic_vitals$systolic_bp ~ clinic_vitals$smoker, main = "Systolic BP by Smokers", xlab = "Smoker", ylab = "Systolic BP", col = "blue")
+```
+
+### Boxplot Interpretation
+
+-   The non-smoker group has several low outliers, with systolic BP values below 80 mmHg. These observations are unusually low compared with the rest of the non-smoker group.
+
+-   The upper whisker extends to approximately 155 mmHg for non-smokers and 150 mmHg for smokers, suggesting that both groups have individuals with relatively high systolic BP.
+
+-   The middle 50% of observations (IQR) for both groups is approximately between 115 and 130mmHg hence a less variability
+
+### Scatter plot
+
+```{r}
+# plotting the scatter plot of systolic bp against smokers 
+plot(clinic_vitals$age, clinic_vitals$systolic_bp, main = "Age vs Systolic Bp", xlab = "Age (years)" , ylab =" Systolic BP", col = "blue")
+```
+
+### Scatterplot interpretation
+
+-   The points are widely scattered, indicating that systolic BP varies considerably among individuals of the same age.
+
+-   Most systolic BP values are concentrated approximately between 110 and 130, although some values are lower or higher.
+
+-   There is a weak linear relationship between age and systolic BP in this data set since there is no pattern.
+
+-   Age alone does not appear to be a strong predictor of systolic blood pressure based on the pattern of this scatter plot.
+
+```{r}
+plot.new()
+
+text(0.5, 0.6, "THANK YOU",
+     cex = 3,
+     font = 2)
+
+text(0.5, 0.45, "Thank you for your attention!",
+     cex = 1.5)
+```
